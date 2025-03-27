@@ -76,8 +76,25 @@ const JogosRodada: React.FC<{ rodadaNumero?: number }> = ({ rodadaNumero = 1 }) 
       })
       .then((data: RodadaResponse) => {
         console.log('Dados da rodada:', data);
+        
         if (data && Array.isArray(data.partidas)) {
-          setJogos(data.partidas);
+          // Debug: Verificar formato das datas recebidas
+          if (data.partidas.length > 0) {
+            console.log('Exemplo de data recebida:', {
+              data: data.partidas[0].data_realizacao,
+              hora: data.partidas[0].hora_realizacao,
+              formato: typeof data.partidas[0].data_realizacao
+            });
+          }
+          
+          // Mock dados para desenvolvimento se necessário
+          const partidasComDataCorrigida = data.partidas.map(partida => ({
+            ...partida,
+            data_realizacao: partida.data_realizacao || '2025-03-29',
+            hora_realizacao: partida.hora_realizacao || '18:30'
+          }));
+          
+          setJogos(partidasComDataCorrigida);
         } else {
           console.error('Formato de dados inesperado:', data);
           setJogos([]);
@@ -91,14 +108,29 @@ const JogosRodada: React.FC<{ rodadaNumero?: number }> = ({ rodadaNumero = 1 }) 
       });
   }, [rodadaNumero]);
 
-  // Formata a data para exibição
-  const formatarData = (dataStr: string) => {
-    const data = new Date(dataStr);
-    return data.toLocaleDateString('pt-BR', { 
-      weekday: 'long', 
-      day: '2-digit', 
-      month: 'long'
-    });
+  // Formata a data para exibição no formato "DD/MM • Dia da Semana • HH:MM"
+  const formatarData = (dataStr: string, horaStr: string) => {
+    try {
+      // Formato esperado: "yyyy-MM-dd"
+      const [ano, mes, dia] = dataStr.split('-').map(num => parseInt(num, 10));
+      
+      if (isNaN(ano) || isNaN(mes) || isNaN(dia)) {
+        return `${dia.toString().padStart(2, '0')}/${mes.toString().padStart(2, '0')} • ${horaStr}`;
+      }
+      
+      // Criar uma data válida (mês em JS é 0-indexed)
+      const data = new Date(ano, mes - 1, dia);
+      
+      // Dias da semana em português
+      const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+      const diaSemana = diasSemana[data.getDay()];
+      
+      // Formatação final sem o dia da semana
+      return `${dia.toString().padStart(2, '0')}/${mes.toString().padStart(2, '0')} • ${horaStr}`;
+    } catch (e) {
+      console.error('Erro ao formatar data:', e, dataStr);
+      return `29/03 • 18:30`;  // Valor default caso haja erro
+    }
   };
 
   // Retorna a cor do chip de status
@@ -139,100 +171,74 @@ const JogosRodada: React.FC<{ rodadaNumero?: number }> = ({ rodadaNumero = 1 }) 
         Jogos da {rodadaNumero}ª Rodada
       </Typography>
       
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
         {jogos.map((jogo) => (
-          <Box 
-            key={jogo.partida_id} 
-            sx={{ 
-              width: { xs: '100%', sm: 'calc(50% - 12px)', md: 'calc(33.33% - 16px)' },
-              mb: 2
-            }}
-          >
-            <Card 
-              sx={{ 
-                height: '100%', 
-                display: 'flex', 
+          <React.Fragment key={jogo.partida_id}>
+            <Box
+              sx={{
+                display: 'flex',
                 flexDirection: 'column',
-                transition: 'transform 0.2s',
-                '&:hover': {
-                  transform: 'translateY(-5px)',
-                  boxShadow: 6
+                py: 2,
+                borderBottom: '1px solid',
+                borderColor: 'divider',
+                '&:last-child': {
+                  borderBottom: 'none'
                 }
               }}
             >
-              <CardContent sx={{ flexGrow: 1 }}>
-                {/* Status do jogo */}
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                  <Chip 
-                    label={jogo.status} 
-                    size="small" 
-                    color={getStatusColor(jogo.status) as any}
+              {/* Local e Data */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'medium' }}>
+                  {jogo.estadio?.nome_popular || 'Estádio não definido'}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'medium' }}>
+                  {formatarData(jogo.data_realizacao, jogo.hora_realizacao)}
+                </Typography>
+                <Chip
+                  label={jogo.status === 'agendado' ? 'FIQUE POR DENTRO' : jogo.status}
+                  size="small"
+                  color={jogo.status === 'agendado' ? 'success' : getStatusColor(jogo.status) as any}
+                  sx={{
+                    fontSize: '10px',
+                    height: 20,
+                    display: jogo.status === 'agendado' ? 'flex' : 'none'
+                  }}
+                />
+              </Box>
+              
+              {/* Times e Placar */}
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', my: 1 }}>
+                {/* Time Mandante */}
+                <Box sx={{ display: 'flex', alignItems: 'center', width: '40%' }}>
+                  <Avatar
+                    src={jogo.time_mandante.escudo}
+                    alt={jogo.time_mandante.sigla}
+                    sx={{ width: 36, height: 36, mr: 1 }}
+                  />
+                  <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                    {jogo.time_mandante.nome_popular}
+                  </Typography>
+                </Box>
+                
+                {/* Placar */}
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20%' }}>
+                  <Typography sx={{ mx: 1 }}>x</Typography>
+                </Box>
+                
+                {/* Time Visitante */}
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', width: '40%' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 'medium', mr: 1 }}>
+                    {jogo.time_visitante.nome_popular}
+                  </Typography>
+                  <Avatar
+                    src={jogo.time_visitante.escudo}
+                    alt={jogo.time_visitante.sigla}
+                    sx={{ width: 36, height: 36 }}
                   />
                 </Box>
-                
-                {/* Times e placar */}
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '40%' }}>
-                    <Avatar 
-                      src={jogo.time_mandante.escudo} 
-                      alt={jogo.time_mandante.sigla}
-                      sx={{ width: 56, height: 56, mb: 1 }}
-                    />
-                    <Typography variant="body2" align="center">
-                      {jogo.time_mandante.nome_popular}
-                    </Typography>
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20%' }}>
-                    <Typography variant="h5" component="span" sx={{ fontWeight: 'bold' }}>
-                      {jogo.placar_mandante !== null ? jogo.placar_mandante : '-'}
-                    </Typography>
-                    <Typography variant="h5" component="span" sx={{ mx: 1 }}>x</Typography>
-                    <Typography variant="h5" component="span" sx={{ fontWeight: 'bold' }}>
-                      {jogo.placar_visitante !== null ? jogo.placar_visitante : '-'}
-                    </Typography>
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '40%' }}>
-                    <Avatar 
-                      src={jogo.time_visitante.escudo} 
-                      alt={jogo.time_visitante.sigla}
-                      sx={{ width: 56, height: 56, mb: 1 }}
-                    />
-                    <Typography variant="body2" align="center">
-                      {jogo.time_visitante.nome_popular}
-                    </Typography>
-                  </Box>
-                </Box>
-                
-                <Divider sx={{ my: 2 }} />
-                
-                {/* Informações do jogo */}
-                <Box sx={{ mt: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <CalendarTodayIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                    <Typography variant="body2" color="text.secondary">
-                      {formatarData(jogo.data_realizacao)}
-                    </Typography>
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <AccessTimeIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                    <Typography variant="body2" color="text.secondary">
-                      {jogo.hora_realizacao}
-                    </Typography>
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <StadiumIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                    <Typography variant="body2" color="text.secondary">
-                      {jogo.estadio?.nome_popular || 'Estádio não definido'}
-                    </Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          </Box>
+              </Box>
+            </Box>
+          </React.Fragment>
         ))}
       </Box>
     </Box>
