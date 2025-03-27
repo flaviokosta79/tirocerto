@@ -1,4 +1,6 @@
 import axios from 'axios';
+import dotenv from 'dotenv';
+dotenv.config();
 
 // Verifica se a API Key foi carregada do .env
 const apiKey = process.env.API_FUTEBOL_KEY;
@@ -9,7 +11,7 @@ if (!apiKey) {
 }
 
 const apiFutebol = axios.create({
-  baseURL: 'https://api.api-futebol.com.br/v1/',
+  baseURL: 'https://api.api-futebol.com.br/v1',
   headers: {
     'Authorization': `Bearer ${apiKey}` // Monta o header de autenticação
   }

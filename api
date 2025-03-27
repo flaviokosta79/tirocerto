@@ -56,22 +56,6 @@ Exemplo
 curl -X GET https://api.api-futebol.com.br/v1/campeonatos/10/rodadas \
 -H "Authorization: Bearer [API_KEY]"
 
-Rodada
-Retorna RODADA de um CAMPEONATO por campeonato_id e rodada.
-
-GET https://api.api-futebol.com.br/v1/campeonatos/{campeonato_id}/rodadas/{rodada}
-Parâmetros
-Substituta campeonato_id pelo ID do campeonato que deseja buscar.
-
-Para listar os IDs dos campeonatos disponíveis utilize o endpoint /v1/campeonatos
-
-Substituta rodada pelo número da rodada que deseja buscar.
-
-Exemplo
-
-curl -X GET https://api.api-futebol.com.br/v1/campeonatos/10/rodadas/1 \
--H "Authorization: Bearer [API_KEY]"
-
 Widget de Rodadas
 O Widget de Rodadas é projetado para fornecer uma visão abrangente das rodadas em torneios ou campeonatos, permitindo aos usuários acessar resultados de jogos, datas e outras informações relevantes de cada rodada. Ele é uma ferramenta interativa que pode ser facilmente integrada a sites, aplicativos ou plataformas digitais, oferecendo aos visitantes uma visão clara e atualizada dos jogos e resultados de seus times favoritos.
 

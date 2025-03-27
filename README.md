@@ -36,6 +36,13 @@ Plataforma interativa de apostas para o Campeonato Brasileiro de Futebol 2025.
 
 ### Instalação
 1. Clone o repositório:
+
+0. Suba o container Docker do Redis:
+```bash
+docker run -d --name redis-tirocerto -p 6379:6379 redis
+```
+
+1. Clone o repositório:
 ```bash
 git clone https://github.com/flaviokosta79/tirocerto.git
 cd tirocerto
