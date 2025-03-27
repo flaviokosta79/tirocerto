@@ -6,7 +6,7 @@ const DEFAULT_EXPIRATION = 300; // 5 minutos em segundos
 export const cacheMiddleware = (cacheKey: string): RequestHandler => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Tenta obter dados do cache
+      // 1. Primeiro verifica o cache
       const cachedData = await redisClient.execute(async (client) => {
         return await client.get(cacheKey);
       });
@@ -17,14 +17,19 @@ export const cacheMiddleware = (cacheKey: string): RequestHandler => {
         return;
       }
 
-      // Intercepta a função res.json para armazenar no cache
+      // 2. Se não tiver cache, continua para a rota
       const originalJson = res.json;
       res.json = (body) => {
-        // Armazena no cache de forma assíncrona sem bloquear a resposta
+        // 3. Armazena no cache apenas se a requisição for bem sucedida
         if (res.statusCode === 200) {
           redisClient.execute(async (client) => {
-            await client.set(cacheKey, JSON.stringify(body), { EX: DEFAULT_EXPIRATION });
-          }).catch((err: Error) => console.error('Failed to set cache:', err));
+            // 4. Usa EX para expiração e NX para não sobrescrever cache existente
+            await client.set(cacheKey, JSON.stringify(body), { 
+              EX: DEFAULT_EXPIRATION,
+              NX: true
+            });
+            console.log(`Cache set for key: ${cacheKey}`);
+          }).catch((err) => console.error('Cache set error:', err));
         }
         return originalJson.call(res, body);
       };
@@ -32,38 +37,7 @@ export const cacheMiddleware = (cacheKey: string): RequestHandler => {
       next();
     } catch (err) {
       console.error('Cache middleware error:', err);
-      next();
-    }
-  };
-};
-
-export const sendWithCache = (cacheKey: string, expiration = DEFAULT_EXPIRATION): RequestHandler => {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const cachedData = await redisClient.execute(async (client) => {
-        return await client.get(cacheKey);
-      });
-
-      if (cachedData) {
-        console.log(`Cache hit for key: ${cacheKey}`);
-        res.send(cachedData);
-        return;
-      }
-
-      const originalSend = res.send;
-      res.send = (body) => {
-        if (res.statusCode === 200 && body) {
-          redisClient.execute(async (client) => {
-            await client.set(cacheKey, body, { EX: expiration });
-          }).catch((err: Error) => console.error('Failed to set cache (send):', err));
-        }
-        return originalSend.call(res, body);
-      };
-
-      next();
-    } catch (err) {
-      console.error('Send with cache error:', err);
-      next();
+      next(err);
     }
   };
 };

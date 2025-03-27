@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config(); // Carrega variáveis do .env para process.env
 
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import './redisClient'; // Importa para inicializar a conexão com Redis
 import { cacheMiddleware } from './middleware/cache'; // Importa o middleware de cache
 import apiFutebol from './services/apiFutebol'; // Importa o serviço da API Futebol
@@ -22,14 +22,10 @@ app.get('/api/health', cacheMiddleware('health'), (req: Request, res: Response) 
 app.get('/api/campeonatos', cacheMiddleware('campeonatos'), async (req: Request, res: Response) => {
   try {
     console.log('Executing /api/campeonatos route handler (fetching from external API)');
-    // Faz a requisição para a API externa usando o serviço configurado
     const response = await apiFutebol.get('/campeonatos');
-    // O middleware de cache interceptará res.json e salvará a resposta no Redis
     res.json(response.data);
   } catch (error: any) {
-    // Log detalhado do erro da API externa
     console.error('Error fetching campeonatos from external API:', error.response?.status, error.response?.data || error.message);
-    // Retorna um erro genérico para o cliente
     res.status(error.response?.status || 500).json({ message: 'Erro ao buscar campeonatos da API externa.' });
   }
 });
